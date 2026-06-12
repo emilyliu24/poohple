@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pooh-ple 🍯</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #fdf3d0;
+      font-family: 'Georgia', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+      color: #3b2a1a;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── background characters ── */
+    .bg-chars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-char {
+      position: absolute;
+      font-size: 7rem;
+      opacity: 0.13;
+      user-select: none;
+      filter: blur(0.5px);
+    }
+    .bg-char.pooh   { top: 6%;  left: 3%;  transform: rotate(-12deg); }
+    .bg-char.piglet { top: 8%;  right: 4%; transform: rotate(10deg); font-size: 5.5rem; }
+    .bg-char.eeyore { bottom: 10%; left: 2%;  transform: rotate(8deg);  font-size: 6rem; }
+    .bg-char.tigger { bottom: 8%;  right: 3%; transform: rotate(-8deg); font-size: 6.5rem; }
+
+    /* ── main content above bg ── */
+    header, #start-screen, #game-area, #win-overlay { position: relative; z-index: 1; }
+
+    header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+    header .honey { font-size: 2.4rem; margin-bottom: 2px; }
+    header h1 {
+      font-size: 2.8rem;
+      color: #c47a1e;
+      letter-spacing: 3px;
+      text-shadow: 1px 2px 0 #f0d090;
+    }
+    header p { margin-top: 5px; font-size: 0.92rem; color: #7a5c38; }
+
+    /* ── start screen ── */
+    #start-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .start-card {
+      background: #fff8e8;
+      border: 2px solid #e8b94a;
+      border-radius: 16px;
+      padding: 24px 30px;
+      width: 100%;
+    }
+
+    .start-card .label {
+      font-size: 0.8rem;
+      color: #b0906a;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .start-card .daily-word {
+      font-size: 2.4rem;
+      letter-spacing: 10px;
+      font-weight: bold;
+      color: #3b2a1a;
+      background: #fce8a0;
+      border: 2px solid #e8b94a;
+      border-radius: 10px;
+      padding: 8px 10px 8px 20px;
+      margin-bottom: 10px;
+    }
+
+    .start-card .sub {
+      font-size: 0.82rem;
+      color: #9a7050;
+    }
+
+    #start-btn {
+      background: #c47a1e;
+      color: #fff;
+      font-weight: bold;
+      padding: 14px 44px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-family: 'Georgia', serif;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #start-btn:hover  { background: #a8640f; }
+    #start-btn:active { transform: scale(0.96); }
+
+    /* ── target banner ── */
+    .target-banner {
+      background: #fce8a0;
+      border: 2px solid #e8b94a;
+      border-radius: 12px;
+      padding: 8px 20px;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+      color: #7a5c38;
+      text-align: center;
+    }
+    .target-banner strong { color: #c47a1e; font-size: 1.2rem; letter-spacing: 4px; }
+
+    /* ── history ── */
+    #history {
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 16px;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .history-row {
+      display: flex;
+      gap: 7px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .history-row .step-num {
+      width: 22px;
+      font-size: 0.75rem;
+      color: #b0906a;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .letter-box {
+      width: 56px; height: 56px;
+      border: 2px solid #d4a85a;
+      border-radius: 8px;
+      background: #fff9ee;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.7rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #3b2a1a;
+    }
+    .letter-box.changed { border-color: #c47a1e; background: #fce8a0; }
+    .letter-box.start   { border-color: #a8c4e0; background: #eaf3fb; }
+    .letter-box.win     { border-color: #5a9e5a; background: #d4f0d4; animation: pop 0.4s ease; }
+
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── word input area ── */
+    #input-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    #tile-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    #tile-input-row.shake { animation: shake 0.35s ease; }
+
+    .tile-input {
+      width: 58px; height: 58px;
+      border: 2px solid #d4a85a;
+      border-radius: 8px;
+      background: #fff9ee;
+      font-size: 1.9rem;
+      font-weight: bold;
+      text-align: center;
+      text-transform: uppercase;
+      color: #3b2a1a;
+      font-family: 'Georgia', serif;
+      outline: none;
+      caret-color: transparent;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .tile-input:focus {
+      border-color: #c47a1e;
+      box-shadow: 0 0 0 3px rgba(196,122,30,0.2);
+    }
+    .tile-input.filled { border-color: #c47a1e; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-7px); }
+      40%      { transform: translateX(7px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }
+
+    #message {
+      min-height: 22px;
+      font-size: 0.88rem;
+      color: #b03030;
+      text-align: center;
+    }
+    #message.good { color: #3a7a3a; }
+
+    .btn-row {
+      display: flex; gap: 10px; margin-top: 2px;
+    }
+
+    button {
+      padding: 10px 22px;
+      border: none; border-radius: 8px;
+      font-size: 1rem; font-family: 'Georgia', serif;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+    button:active { transform: scale(0.96); }
+
+    #enter-btn {
+      background: #c47a1e; color: #fff;
+      font-weight: bold; letter-spacing: 1px;
+    }
+    #enter-btn:hover { background: #a8640f; }
+
+    #reset-btn {
+      background: #e0d0b0; color: #5a3e20;
+    }
+    #reset-btn:hover { background: #c8b898; }
+
+    .hint {
+      font-size: 0.76rem; color: #b0906a;
+      margin-top: 6px; text-align: center;
+    }
+
+    /* ── win overlay ── */
+    #win-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    #win-overlay.show { display: flex; }
+
+    .win-card {
+      background: #fdf6e3;
+      border: 3px solid #e8b94a;
+      border-radius: 20px;
+      padding: 32px 36px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      animation: slideUp 0.35s ease;
+      position: relative; z-index: 201;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .win-card .w-emoji  { font-size: 3rem; }
+    .win-card h2        { font-size: 1.7rem; color: #c47a1e; margin: 8px 0 4px; }
+    .win-card .your-steps {
+      font-size: 1.1rem; color: #3b2a1a; margin-bottom: 4px;
+    }
+    .win-card .best-steps {
+      font-size: 0.85rem; color: #7a5c38;
+      background: #fce8a0; border: 1.5px solid #e8b94a;
+      border-radius: 8px; padding: 6px 12px;
+      margin: 8px auto 14px;
+      display: inline-block;
+    }
+    .win-card .path-display {
+      font-size: 0.78rem; color: #9a7050; margin-bottom: 16px;
+      word-break: break-all;
+    }
+
+    #play-again-btn {
+      background: #c47a1e; color: #fff;
+      font-weight: bold; padding: 10px 28px;
+      border-radius: 8px; font-size: 1rem;
+    }
+    #play-again-btn:hover { background: #a8640f; }
+
+    /* ── floating Pooh heads ── */
+    .pooh-float {
+      position: fixed;
+      font-size: 2.8rem;
+      z-index: 199;
+      animation: floatUp 2.8s ease-out forwards;
+      pointer-events: none;
+      user-select: none;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0)   rotate(0deg);   opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateY(-85vh) rotate(20deg); opacity: 0; }
+    }
+
+    #game-area { width: 100%; max-width: 340px; }
+  </style>
+</head>
+<body>
+
+<!-- background characters -->
+<div class="bg-chars">
+  <div class="bg-char pooh">🐻</div>
+  <div class="bg-char piglet">🐷</div>
+  <div class="bg-char eeyore">🫏</div>
+  <div class="bg-char tigger">🐯</div>
+</div>
+
+<!-- header -->
+<header>
+  <div class="honey">🍯</div>
+  <h1>Pooh-ple</h1>
+  <p>Change one letter at a time to reach <strong>POOH</strong></p>
+</header>
+
+<!-- start screen -->
+<div id="start-screen">
+  <div class="start-card">
+    <div class="label">Today's starting word</div>
+    <div class="daily-word" id="daily-word-display">????</div>
+    <div class="sub">Can you get from this word to <strong>POOH</strong>?</div>
+  </div>
+  <button id="start-btn" onclick="startGame()">🐻 Start Playing</button>
+</div>
+
+<!-- game area -->
+<div id="game-area" style="display:none;">
+  <div class="target-banner">Goal: reach &nbsp;<strong>POOH</strong>&nbsp; 🍯</div>
+
+  <div id="history"></div>
+
+  <div id="input-area">
+    <div id="tile-input-row">
+      <input class="tile-input" maxlength="1" data-idx="0" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="characters" />
+      <input class="tile-input" maxlength="1" data-idx="1" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="characters" />
+      <input class="tile-input" maxlength="1" data-idx="2" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="characters" />
+      <input class="tile-input" maxlength="1" data-idx="3" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="characters" />
+    </div>
+    <div id="message"></div>
+    <div class="btn-row">
+      <button id="enter-btn" onclick="submitWord()">Enter ↵</button>
+      <button id="reset-btn" onclick="resetGame()">New Game</button>
+    </div>
+    <div class="hint">Type one letter per box · press Enter to submit</div>
+  </div>
+</div>
+
+<!-- win overlay -->
+<div id="win-overlay">
+  <div class="win-card">
+    <div class="w-emoji">🐻🍯</div>
+    <h2>Oh bother — you did it!</h2>
+    <div class="your-steps" id="your-steps-text"></div>
+    <div class="best-steps" id="best-steps-text"></div>
+    <div class="path-display" id="path-display"></div>
+    <button id="play-again-btn" onclick="resetGame()">Play Again</button>
+  </div>
+</div>
+
+<script>
+// ─── word list ────────────────────────────────────────────────────────────────
+// ~1100 carefully generated 4-letter English words covering all common families
+const WORD_LIST = new Set(`
+able ably abut aced aces ache achy acid acme acne acre acts adds adze afar aged
+ages ahoy aide aids ails aims airs airy ajar alms aloe also alto alum amid amok
+amps anew anon anti ants apex arch arcs area aria arid arms army arty awed awes
+awls awry axes axis axle ayes babe back bade bads bail bake bald bale balk ball
+balm band bane bang bank bard bare bark base bash bask bath baud bawl bays bead
+beam bean bear beat beck beds been beep beer bell bend bent berg best beta bibs
+bide bike bile bilk bill bind bird bite blab blah blob blog blot blow blue bogs
+boil bold bolt bond bone bong bonk book boom boon boop boot bore born boss boys
+brad brae brat braw brow buck buds buff bulb bull bump bung bunk buns bunt buoy
+burn burp bust byte cafe cage cake calf call came cane cant cape card care cart
+case cash cask cast cave cede ceil cell cent chap chat chip chub chug cite city
+clap claw clef clew clip clog clot cloy club clue cobs coif coil coin coke cold
+colt come cone conk cons cook cool coos cope cops cord core cork corn cost cove
+crag cram craw crib crow crux cuff cull cups cusp cyan dace dale dame dank dare
+dark dart dash data date daub dawn daze dead deal dean dear deem deep deer deft
+dell dent deny desk dial dice digs dike dill dine ding dint dish diva dive dock
+dole dolt dome done dong doom door dope dorm dose dote dove down drab dram drat
+draw drip drug drum dubs duck dude duff duke dull duly dump dung dunk dupe dust
+dyne each earl earn ease eats edgy emit epic eras ergo erne etch ewer exam face
+fact fade fail fair fake fall fame fang fare farm fart fast fate fawn faze fear
+feat feed feel fell fend fern fete feud file fill find fine fink fire firm fish
+fist five fizz flak flan flap flat flaw flea fled flew flex flip flit floe flog
+flow flux foil fold fond food fool ford fore fork form fort fowl fray fret frog
+fuel full fume fund funk furl fuzz gain gale gall game gang gape garb gash gasp
+gate gave gawk gaze gear geek geld gent gibe gild gill gist give glib glob glow
+glue glum glut gnat gnaw goat gold gone gong good goof gook goop gore gout gown
+grab gram gray grid grip grit grow grub gull gunk guru gust hack hags hail hair
+hall hand hang hard hare hark harm hart hash hate have haze head heal hear heat
+heed heel heft hell helm hens herb herd hewn hick hide hike hill hind hint hips
+hire hive hoax hobs hock hold hole home hone honk hood hoof hook hoop hoot hope
+horn hose huff hull hump hung hunk hunt husk hymn iced icon idle idol inch iris
+isle itch jack jade jail jamb jazz jean jeer jell jest jive jobs join joke jolt
+josh jowl judo jump junk just keel keen keep kelp keys kick kill kiln kilo kind
+king kite knit knob knot know lace lack lair lake lame lamp land lane lank lard
+lark lash last late laud lave lawn lead lean leer lend lent levy lice lick life
+like limb line link lint lira lite live lock lode loft loin lone long look loom
+loon loop loot lord lore loss lost love luck lull lump lung mace made maid mail
+main make male mall malt mama mane mare mark mart mash mask mast mate math maul
+maze mead meal mean meat meek meld memo mend meow mesh mice mike mile mill mind
+mine mink mint mire mite mitt moat mock mold mole molt monk mood moon moor moot
+mope more morn mort moss most mote muck muff mull muse musk must myth nail name
+nave navy near neat need nest newt nice nick nine node noir none nook noon norm
+nose note null odds oral orbs oval oven owed oxen pace pack pact page paid pail
+pain pair pale pane pang pant pare park part past path pave pawn peal pear peat
+peek peel peep peer pent peon perk pest pick pier pike pile pill pine ping pink
+pint plod plot plow ploy plug plum poke pole pond pong poof pooh pool poop poor
+pope pore pork port pose post prow puck puff pull pulp pump punk punt putt pyre
+quay quit quiz race rack rage raid rail rain rake ramp rang rank rant rare rash
+rasp rate rave raze read real ream reap rear reek reel rely rend rent rest rice
+rick ride rife rift rile rill rime ring rink riot rive rock role romp roof rook
+room root rope rose rout rove rube ruff rump rune rung runt ruse rust sack sage
+said sail sake sale same sand sane sang sank sash sate save scam scan scar scat
+scum seal seam sear seat seed seek seen seep seer sell send sent sewn ship shot
+show shun sick side sill silo sine sing sink sire site skip skit slag slap slat
+slid slim slip slit slob slog slop slot slow slug slum smug smut snag snap snob
+snot snow snub snug soak soap sock soil sold sole some song soon soot sore sort
+spat spec sped spit spot spun stab stag stow stub stum stun suck sued sulk sung
+sunk swab swam swap swum tack tact tail take tale tall tame tank tape tare tarn
+tart task taut teak teal team tear teen tell tend tent test that thaw thug tick
+tide tidy tile till tine tint tire toil told tome tone tong took tool toot tore
+torn tort toss tote town trap trip trot true tuba tuck tuft tuna turf turn ugly
+unit unto upon urge vain vale vane vase veal veer veil vend vent vest veto vial
+vice vied view vile vine vise void vole volt vote wade wads wage wail wake wale
+wall wand wane want ward ware warm wart wave wavy waxy weal wean wear weed week
+weep weld well welt wend went west whip wick wide wife wile will wimp wind wine
+wing wink wire wiry wish wisp woke womb wont wood woof wool word wore work worm
+worn wort wove wrap wren writ yank yard yawn year yell yoke yore your zeal zest
+zinc zone zoom
+barn darn yarn earn warn tarn
+`.trim().split(/\s+/).filter(w => w.length === 4));
+
+// ─── daily starting words ─────────────────────────────────────────────────────
+const DAILY_WORDS = [
+  'POOL','BOOK','LOOK','COOK','HOOK','NOOK','WOOD','GOOD','FOOD',
+  'MOOD','BOOT','HOOT','LOOT','ROOT','SOOT','TOOT','BOLD','COLD',
+  'FOLD','GOLD','HOLD','MOLD','SOLD','TOLD','POLL','ROLL','TOLL',
+  'WOOL','COOL','FOOL','TOOL','BORE','CORE','FORE','GORE','LORE',
+  'MORE','PORE','SORE','WORE','BONE','CONE','DONE','GONE','HONE',
+  'LONE','NONE','TONE','ZONE','BOON','LOON','MOON','NOON','SOON',
+  'POOF','POOR','HOOD','POOP','BOOP','GOOP','LOOP','HOOP',
+];
+
+// ─── BFS shortest path ────────────────────────────────────────────────────────
+function bfsShortestStepsFix(start) {
+  const target = 'POOH';
+  if (start === target) return 0;
+  const queue = [[start, 0]];
+  const visited = new Set([start]);
+  while (queue.length) {
+    const [word, dist] = queue.shift();
+    for (let i = 0; i < 4; i++) {
+      for (let c = 65; c <= 90; c++) {
+        if (word.charCodeAt(i) === c) continue;
+        const next = word.substring(0, i) + String.fromCharCode(c) + word.substring(i + 1);
+        if (!visited.has(next) && WORD_LIST.has(next.toLowerCase())) {
+          if (next === target) return dist + 1;
+          visited.add(next);
+          queue.push([next, dist + 1]);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ─── state ────────────────────────────────────────────────────────────────────
+const TARGET = 'POOH';
+let currentWord     = '';
+let history         = [];
+let dailyWord       = '';
+let fastestPossible = null;
+
+// ─── init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const day = Math.floor(Date.now() / 86400000);
+  dailyWord = DAILY_WORDS[day % DAILY_WORDS.length];
+  document.getElementById('daily-word-display').textContent = dailyWord;
+})();
+
+// ─── tile input setup ─────────────────────────────────────────────────────────
+const tiles = Array.from(document.querySelectorAll('.tile-input'));
+
+tiles.forEach((tile, idx) => {
+  tile.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitWord(); return; }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (tile.value) {
+        tile.value = '';
+        tile.classList.remove('filled');
+      } else if (idx > 0) {
+        tiles[idx - 1].value = '';
+        tiles[idx - 1].classList.remove('filled');
+        tiles[idx - 1].focus();
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); if (idx > 0) tiles[idx - 1].focus(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (idx < 3) tiles[idx + 1].focus(); return; }
+
+    if (/^[a-zA-Z]$/.test(e.key)) {
+      e.preventDefault();
+      tile.value = e.key.toUpperCase();
+      tile.classList.add('filled');
+      if (idx < 3) tiles[idx + 1].focus();
+    }
+  });
+
+  // handle mobile keyboard / input event as fallback
+  tile.addEventListener('input', () => {
+    const v = tile.value.replace(/[^a-zA-Z]/g, '').slice(-1).toUpperCase();
+    tile.value = v;
+    if (v) {
+      tile.classList.add('filled');
+      if (idx < 3) tiles[idx + 1].focus();
+    } else {
+      tile.classList.remove('filled');
+    }
+  });
+
+  tile.addEventListener('focus', () => tile.select());
+});
+
+// ─── start game ───────────────────────────────────────────────────────────────
+function startGame() {
+  currentWord     = dailyWord;
+  history         = [{ word: dailyWord, isStart: true }];
+  fastestPossible = bfsShortestStepsFix(dailyWord);
+
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-area').style.display    = 'block';
+
+  renderHistory();
+  clearTiles();
+  tiles[0].focus();
+  setMessage('');
+}
+
+function clearTiles() {
+  tiles.forEach(t => { t.value = ''; t.classList.remove('filled'); });
+}
+
+// ─── render history ───────────────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('history');
+  el.innerHTML = '';
+  history.forEach((entry, i) => {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+
+    const num = document.createElement('span');
+    num.className = 'step-num';
+    num.textContent = i === 0 ? '★' : i;
+    row.appendChild(num);
+
+    entry.word.split('').forEach((letter, li) => {
+      const box = document.createElement('div');
+      box.className = 'letter-box';
+      box.textContent = letter;
+
+      if (entry.isStart) {
+        box.classList.add('start');
+      } else if (entry.isWin) {
+        box.classList.add('win');
+      } else {
+        // highlight letters that match TARGET positionally
+        if (letter === TARGET[li]) box.classList.add('changed');
+      }
+      row.appendChild(box);
+    });
+
+    el.appendChild(row);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+// ─── submit ───────────────────────────────────────────────────────────────────
+function submitWord() {
+  const typed = tiles.map(t => t.value.toUpperCase()).join('');
+
+  if (typed.length !== 4 || typed.includes(' ') || !/^[A-Z]{4}$/.test(typed)) {
+    showError('Fill in all 4 boxes first!');
+    return;
+  }
+
+  let diffCount = 0;
+  for (let i = 0; i < 4; i++) {
+    if (typed[i] !== currentWord[i]) diffCount++;
+  }
+
+  if (diffCount === 0) {
+    showError("That's the same word — change one letter!");
+    return;
+  }
+  if (diffCount > 1) {
+    showError('Only ONE letter can change per guess.');
+    return;
+  }
+
+  if (typed !== 'POOH' && !WORD_LIST.has(typed.toLowerCase())) {
+    showError(`"${typed}" isn't a word we recognise. Try another!`);
+    return;
+  }
+
+  // accept
+  const isWin = typed === 'POOH';
+  currentWord = typed;
+  history.push({ word: typed, isWin });
+  renderHistory();
+  clearTiles();
+  setMessage('');
+
+  if (isWin) {
+    setTimeout(triggerWin, 250);
+  } else {
+    tiles[0].focus();
+  }
+}
+
+function showError(msg) {
+  setMessage(msg);
+  const row = document.getElementById('tile-input-row');
+  row.classList.remove('shake');
+  void row.offsetWidth;
+  row.classList.add('shake');
+  setTimeout(() => row.classList.remove('shake'), 400);
+}
+
+// ─── win ──────────────────────────────────────────────────────────────────────
+function triggerWin() {
+  launchPoohHeads();
+  const steps = history.length - 1;
+  document.getElementById('your-steps-text').textContent =
+    `You got there in ${steps} ${steps === 1 ? 'step' : 'steps'}! 🎉`;
+  document.getElementById('best-steps-text').textContent =
+    fastestPossible !== null
+      ? `⚡ Fastest possible from ${dailyWord}: ${fastestPossible} ${fastestPossible === 1 ? 'step' : 'steps'}`
+      : `⚡ Fastest possible: unknown`;
+  document.getElementById('path-display').textContent =
+    history.map(e => e.word).join(' → ');
+  document.getElementById('win-overlay').classList.add('show');
+}
+
+// ─── floating Pooh heads ──────────────────────────────────────────────────────
+function launchPoohHeads() {
+  const emojis = ['🐻','🍯','🐻','🍯','🐻','🌟','🐝','🍯'];
+  for (let i = 0; i < 20; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'pooh-float';
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      el.style.left   = Math.random() * 90 + 5 + 'vw';
+      el.style.bottom = '0';
+      el.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      el.style.fontSize = (2 + Math.random() * 2) + 'rem';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4200);
+    }, i * 120);
+  }
+}
+
+// ─── reset ────────────────────────────────────────────────────────────────────
+function resetGame() {
+  document.getElementById('win-overlay').classList.remove('show');
+  document.getElementById('game-area').style.display    = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+  document.getElementById('history').innerHTML = '';
+  clearTiles();
+  setMessage('');
+}
+
+function setMessage(msg) {
+  document.getElementById('message').textContent = msg;
+}
+</script>
+</body>
+</html>
